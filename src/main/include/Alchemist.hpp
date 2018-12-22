@@ -84,11 +84,10 @@ inline Log_ptr start_log(std::string name, std::string pattern)
 	auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_st>(logfile_name, true);
 	file_sink->set_level(spdlog::level::trace);
 
-	Log_ptr log;
 	std::vector<spdlog::sink_ptr> sinks;
 	sinks.push_back(console_sink);
 	sinks.push_back(file_sink);
-	log = std::make_shared<spdlog::logger>(name, std::begin(sinks), std::end(sinks));
+	Log_ptr log = std::make_shared<spdlog::logger>(name, std::begin(sinks), std::end(sinks));
 	return log;
 }
 
@@ -1370,19 +1369,21 @@ struct Library {
 
 	Library(MPI_Comm & _world) : world(_world) { }
 
-	virtual ~Library() { }
+	virtual ~Library() {}
 
 	MPI_Comm & world;
+
+	Log_ptr log;
 
 	virtual int load() = 0;
 	virtual int unload() = 0;
 	virtual int run(string & task_name, Parameters & in, Parameters & out) = 0;
 };
 
-typedef Library * create_t(MPI_Comm &);
-typedef void destroy_t(Library *);
-
 typedef std::shared_ptr<Library> Library_ptr;
+
+//typedef Library * create_t(MPI_Comm &);
+//typedef void destroy_t(Library *);
 
 }
 

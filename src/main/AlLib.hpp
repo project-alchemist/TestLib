@@ -27,7 +27,7 @@
 //#include "nla/nla.hpp"						// Include all NLA routines
 //#include "ml/ml.hpp"							// Include all ML/Data-mining routines
 
-namespace allib {
+namespace alchemist {
 
 //typedef El::AbstractDistMatrix<double> DistMatrix;
 
@@ -44,13 +44,12 @@ struct GridObj {
 };
 
 using std::string;
-using namespace alchemist;
 
 struct AlLib : Library {
 
 	AlLib(MPI_Comm & world);
 
-	~AlLib() {}
+	~AlLib() { }
 
 	Log_ptr log;
 
@@ -63,12 +62,12 @@ struct AlLib : Library {
 };
 
 // Class factories
-extern "C" Library * create(MPI_Comm & world) {
-    return new AlLib(world);
+extern "C" void * create(MPI_Comm & world) {
+	return reinterpret_cast<void*>(new AlLib(world));
 }
 
-extern "C" void destroy(Library * p) {
-    delete p;
+extern "C" void destroy(void * p) {
+    delete reinterpret_cast<AlLib*>(p);
 }
 
 }

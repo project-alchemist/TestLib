@@ -1,10 +1,8 @@
 #include "AlLib.hpp"
 
-using alchemist::Parameters;
+namespace alchemist {
 
-namespace allib {
-
-AlLib::AlLib(MPI_Comm & world) : Library(world)
+AlLib::AlLib(MPI_Comm & _world) : Library(_world)
 {
 	int world_rank, world_size;
 	MPI_Comm_rank(world, &world_rank);
