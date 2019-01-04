@@ -8,12 +8,20 @@ AlLib::AlLib(MPI_Comm & _world) : Library(_world)
 	MPI_Comm_rank(world, &world_rank);
 	MPI_Comm_size(world, &world_size);
 
-	bool isDriver = world_rank == 0;
-	auto name = (isDriver) ? "AlLib driver" : "AlLib worker " + std::to_string(world_rank);
+	bool is_driver = world_rank == 0;
+	auto name = (is_driver) ? "TestLib driver" : "TestLib worker " + std::to_string(world_rank);
 
-	log = start_log("library", "[%Y-%m-%d %H:%M:%S.%e] [%n] [%l]    %v");
+	if (is_driver) {
+		log = start_log("TestLib driver", "[%Y-%m-%d %H:%M:%S.%e] [%n] [%l]        %v");
+	}
+	else {
+		char buffer[12];
+		sprintf(buffer, "TestLib worker-%03d", (uint16_t) world_rank);
 
-	log->info("Po1 {}/{}", world_rank, world_size);
+		log = start_log(string(buffer), "[%Y-%m-%d %H:%M:%S.%e] [%n] [%l]    %v");
+	}
+
+//	log->info("Po1 {}/{}", world_rank, world_size);
 }
 
 int AlLib::load()
@@ -78,8 +86,16 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 
 	if (task_name.compare("greet") == 0) {
 
-		if (is_driver) log->info("Saying hello from TestLib driver");
-		else log->info("Saying hello from TestLib worker {}", world_rank);
+		int32_t rank = in.get_int32("rank");
+
+		if (is_driver) log->info("Saying hello from TestLib driver {}", rank);
+		else log->info("Saying hello from TestLib worker {} {}", world_rank, rank);
+
+		uint64_t new_rank = 6666;
+		string vv = "spacious";
+
+		out.add_uint64("new_rank", new_rank);
+		out.add_string("vv", vv);
 
 	}
 	else if (task_name.compare("kmeans") == 0) {
