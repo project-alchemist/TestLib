@@ -71,6 +71,7 @@ typedef enum _datatype : uint8_t {
 } datatype;
 
 typedef uint16_t Matrix_ID;
+typedef uint16_t Worker_ID;
 typedef std::shared_ptr<spdlog::logger> Log_ptr;
 
 inline Log_ptr start_log(std::string name, std::string pattern)
@@ -90,6 +91,56 @@ inline Log_ptr start_log(std::string name, std::string pattern)
 	Log_ptr log = std::make_shared<spdlog::logger>(name, std::begin(sinks), std::end(sinks));
 	return log;
 }
+
+// =================================================================================================
+// ========================================= Matrices ==============================================
+// =================================================================================================
+
+struct MatrixInfo {
+	Matrix_ID ID;
+	uint64_t num_rows;
+	uint64_t num_cols;
+
+	std::vector<Worker_ID> row_assignments;
+
+	explicit MatrixInfo() : ID(0), num_rows(0), num_cols(0) { }
+
+	MatrixInfo(Matrix_ID _ID, uint64_t _num_rows, uint64_t _num_cols) :
+		ID(_ID), num_rows(_num_rows), num_cols(_num_cols) {
+		row_assignments.resize(num_rows);
+	}
+
+	string to_string() {
+		std::stringstream ss;
+
+		ss << "Matrix " << ID << " (dim: " << num_rows << " x " << num_cols << ")";
+
+		return ss.str();
+	}
+};
+
+typedef std::shared_ptr<El::DistMatrix<double, El::VR, El::STAR>> ElDistMatrix_ptr;
+typedef std::shared_ptr<DistMatrix> DistMatrix_ptr;
+
+struct DistMatrix {
+
+	DistMatrix(uint64_t num_rows, uint64_t num_cols, El::Grid & _grid) : grid(_grid) {
+		data = std::make_shared<El::DistMatrix<double, El::VR, El::STAR>>(El::DistMatrix<double, El::VR, El::STAR>(num_rows, num_cols, grid));
+		El::Zero(*data);
+	}
+
+	virtual ~DistMatrix() { }
+
+	std::shared_ptr<El::DistMatrix<double, El::VR, El::STAR>> data;
+
+	El::Grid & grid;
+};
+
+
+
+// =================================================================================================
+// ======================================== Parameters =============================================
+// =================================================================================================
 
 struct Parameter {
 public:
@@ -977,45 +1028,45 @@ protected:
 	string value;
 };
 
-struct MatrixIDParameter : Parameter {
+struct MatrixInfoParameter {
 public:
 
-	MatrixIDParameter(string _name, Matrix_ID _value) : Parameter(_name, MATRIX_ID), value(_value) { }
+	MatrixInfoParameter(string _name, Matrix_ID _value) : Parameter(_name, NONE), value(_value) { }
 
-	~MatrixIDParameter() { }
+	~MatrixInfoParameter() { }
 
-	Matrix_ID get_value() const {
+	MatrixInfo get_value() const {
 		return value;
 	}
 
 	string to_string() const {
-		return std::to_string(value);
+		return value.to_string();
 	}
 
 protected:
-	Matrix_ID value;
+	MatrixInfo value;
 };
 
-//struct DistMatrixParameter : Parameter {
-//public:
-//
-//	DistMatrixParameter(string _name, DistMatrix_ptr _value) : Parameter(_name, NONE), value(_value) {}
-//
-//	~DistMatrixParameter() {}
-//
-//	DistMatrix_ptr get_value() const {
-//		return value;
-//	}
-//
-//	string to_string() const {
-//		std::stringstream ss;
-//		ss << value;
-//		return ss.str();
-//	}
-//
-//protected:
-//	DistMatrix_ptr value;
-//};
+struct DistMatrixParameter {
+public:
+
+	DistMatrixParameter(string _name, DistMatrix_ptr _value) : Parameter(_name, NONE), value(_value) {}
+
+	~DistMatrixParameter() {}
+
+	DistMatrix_ptr get_value() const {
+		return value;
+	}
+
+	string to_string() const {
+		std::stringstream ss;
+		ss << value;
+		return ss.str();
+	}
+
+protected:
+	DistMatrix_ptr value;
+};
 
 struct PointerParameter : Parameter {
 public:
@@ -1045,11 +1096,11 @@ public:
 	~Parameters() { }
 
 	uint32_t current_parameter_count;
-	std::map<string, std::shared_ptr<Parameter> >::iterator it;
+	std::map<std::string, std::shared_ptr<Parameter> >::iterator it;
 
 	datatype get_next_parameter()
 	{
-		if (current_parameter_count == 0) it = parameters.begin();
+		if (current_parameter_count == 0) it = variable_parameters.begin();
 		else it++;
 		current_parameter_count++;
 
@@ -1058,12 +1109,12 @@ public:
 		return _dt;
 	}
 
-	string get_name() {
+	std::string get_name() {
 		return it->second->get_name();
 	}
 
 	int num() const {
-		return parameters.size() + matrix_parameters.size();
+		return variable_parameters.size() + matrix_info_parameters.size() + matrix_parameters.size() + pointer_parameters.size();
 	}
 
 //	size_t num_distmatrices() const {
@@ -1075,348 +1126,340 @@ public:
 	}
 
 	void add(Parameter * p) {
-		parameters.insert(std::make_pair(p->get_name(), p));
+		variable_parameters.insert(std::make_pair(p->get_name(), p));
 	}
 
 	std::shared_ptr<Parameter> get(string name) const {
-		return parameters.find(name)->second;
+		return variable_parameters.find(name)->second;
 	}
 
 	void add_char(string name, char value) {
-		parameters.insert(std::make_pair(name, new CharParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new CharParameter(name, value)));
 	}
 
 	void add_signed_char(string name, signed char value) {
-		parameters.insert(std::make_pair(name, new SignedCharParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new SignedCharParameter(name, value)));
 	}
 
 	void add_unsigned_char(string name, unsigned char value) {
-		parameters.insert(std::make_pair(name, new UnsignedCharParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new UnsignedCharParameter(name, value)));
 	}
 
 	void add_character(string name, char value) {
-		parameters.insert(std::make_pair(name, new CharacterParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new CharacterParameter(name, value)));
 	}
 
 	void add_wchar(string name, wchar_t value) {
-		parameters.insert(std::make_pair(name, new WcharParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new WcharParameter(name, value)));
 	}
 
 	void add_short(string name, short value) {
-		parameters.insert(std::make_pair(name, new ShortParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new ShortParameter(name, value)));
 	}
 
 	void add_unsigned_short(string name, unsigned short value) {
-		parameters.insert(std::make_pair(name, new UnsignedShortParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new UnsignedShortParameter(name, value)));
 	}
 
 	void add_int(string name, int value) {
-		parameters.insert(std::make_pair(name, new IntParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new IntParameter(name, value)));
 	}
 
 	void add_unsigned(string name, unsigned int value) {
-		parameters.insert(std::make_pair(name, new UnsignedParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new UnsignedParameter(name, value)));
 	}
 
 	void add_long(string name, long value) {
-		parameters.insert(std::make_pair(name, new LongParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new LongParameter(name, value)));
 	}
 
 	void add_unsigned_long(string name, unsigned long value) {
-		parameters.insert(std::make_pair(name, new UnsignedLongParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new UnsignedLongParameter(name, value)));
 	}
 
 	void add_long_long_int(string name, long long int value) {
-		parameters.insert(std::make_pair(name, new LongLongIntParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new LongLongIntParameter(name, value)));
 	}
 
 	void add_long_long(string name, long long int value) {
-		parameters.insert(std::make_pair(name, new LongLongParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new LongLongParameter(name, value)));
 	}
 
 	void add_unsigned_long_long(string name, unsigned long long int value) {
-		parameters.insert(std::make_pair(name, new UnsignedLongLongParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new UnsignedLongLongParameter(name, value)));
 	}
 
 	void add_float(string name, float value) {
-		parameters.insert(std::make_pair(name, new FloatParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new FloatParameter(name, value)));
 	}
 
 	void add_double(string name, double value) {
-		parameters.insert(std::make_pair(name, new DoubleParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new DoubleParameter(name, value)));
 	}
 
 	void add_long_double(string name, long double value) {
-		parameters.insert(std::make_pair(name, new LongDoubleParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new LongDoubleParameter(name, value)));
 	}
 
 	void add_byte(string name, uint8_t value) {
-		parameters.insert(std::make_pair(name, new ByteParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new ByteParameter(name, value)));
 	}
 
 	void add_bool(string name, bool value) {
-		parameters.insert(std::make_pair(name, new BoolParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new BoolParameter(name, value)));
 	}
 
 	void add_integer(string name, int value) {
-		parameters.insert(std::make_pair(name, new IntegerParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new IntegerParameter(name, value)));
 	}
 
 	void add_real(string name, double value) {
-		parameters.insert(std::make_pair(name, new RealParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new RealParameter(name, value)));
 	}
 
 	void add_logical(string name, bool value) {
-		parameters.insert(std::make_pair(name, new LogicalParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new LogicalParameter(name, value)));
 	}
 
 	void add_complex(string name, std::complex<double> value) {
-		parameters.insert(std::make_pair(name, new ComplexParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new ComplexParameter(name, value)));
 	}
 
 	void add_double_precision(string name, double value) {
-		parameters.insert(std::make_pair(name, new DoublePrecisionParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new DoublePrecisionParameter(name, value)));
 	}
 
 	void add_real4(string name, float value) {
-		parameters.insert(std::make_pair(name, new Real4Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Real4Parameter(name, value)));
 	}
 
 	void add_complex8(string name, std::complex<float> value) {
-		parameters.insert(std::make_pair(name, new Complex8Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Complex8Parameter(name, value)));
 	}
 
 	void add_real8(string name, double value) {
-		parameters.insert(std::make_pair(name, new Real8Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Real8Parameter(name, value)));
 	}
 
 	void add_complex16(string name, std::complex<double> value) {
-		parameters.insert(std::make_pair(name, new Complex16Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Complex16Parameter(name, value)));
 	}
 
 	void add_integer1(string name, int8_t value) {
-		parameters.insert(std::make_pair(name, new Integer1Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Integer1Parameter(name, value)));
 	}
 
 	void add_integer2(string name, int16_t value) {
-		parameters.insert(std::make_pair(name, new Integer2Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Integer2Parameter(name, value)));
 	}
 
 	void add_integer4(string name, int32_t value) {
-		parameters.insert(std::make_pair(name, new Integer4Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Integer4Parameter(name, value)));
 	}
 
 	void add_integer8(string name, int64_t value) {
-		parameters.insert(std::make_pair(name, new Integer8Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Integer8Parameter(name, value)));
 	}
 
 	void add_int8(string name, int8_t value) {
-		parameters.insert(std::make_pair(name, new Int8Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Int8Parameter(name, value)));
 	}
 
 	void add_int16(string name, int16_t value) {
-		parameters.insert(std::make_pair(name, new Int16Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Int16Parameter(name, value)));
 	}
 
 	void add_int32(string name, int32_t value) {
-		parameters.insert(std::make_pair(name, new Int32Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Int32Parameter(name, value)));
 	}
 
 	void add_int64(string name, int64_t value) {
-		parameters.insert(std::make_pair(name, new Int64Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new Int64Parameter(name, value)));
 	}
 
 	void add_uint8(string name, uint8_t value) {
-		parameters.insert(std::make_pair(name, new UInt8Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new UInt8Parameter(name, value)));
 	}
 
 	void add_uint16(string name, uint16_t value) {
-		parameters.insert(std::make_pair(name, new UInt16Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new UInt16Parameter(name, value)));
 	}
 
 	void add_uint32(string name, uint32_t value) {
-		parameters.insert(std::make_pair(name, new UInt32Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new UInt32Parameter(name, value)));
 	}
 
 	void add_uint64(string name, uint64_t value) {
-		parameters.insert(std::make_pair(name, new UInt64Parameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new UInt64Parameter(name, value)));
 	}
 
 	void add_float_int(string name, uint32_t value) {
-		parameters.insert(std::make_pair(name, new FloatIntParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new FloatIntParameter(name, value)));
 	}
 
 	void add_double_int(string name, uint64_t value) {
-		parameters.insert(std::make_pair(name, new DoubleIntParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new DoubleIntParameter(name, value)));
 	}
 
 	void add_long_int(string name, long int value) {
-		parameters.insert(std::make_pair(name, new LongIntParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new LongIntParameter(name, value)));
 	}
 
 	void add_short_int(string name, short int value) {
-		parameters.insert(std::make_pair(name, new ShortIntParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new ShortIntParameter(name, value)));
 	}
 
 	void add_long_double_int(string name, uint64_t value) {
-		parameters.insert(std::make_pair(name, new LongDoubleIntParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new LongDoubleIntParameter(name, value)));
 	}
 
 	void add_string(string name, string value) {
-		parameters.insert(std::make_pair(name, new StringParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new StringParameter(name, value)));
 	}
 
 	void add_wstring(string name, string value) {
-		parameters.insert(std::make_pair(name, new WStringParameter(name, value)));
+		variable_parameters.insert(std::make_pair(name, new WStringParameter(name, value)));
 	}
 
-	void add_matrix(string name, const Matrix_ID value) {
-		matrix_parameters.insert(std::make_pair(name, new MatrixIDParameter(name, value)));
+	void add_matrix_info(string name, const MatrixInfo & value) {
+		matrix_info_parameters.insert(std::make_pair(name, new MatrixInfoParameter(name, value)));
 	}
 
-//	void add_distmatrix(string name, const DistMatrix_ptr & value) {
-//		distmatrix_parameters.insert(std::make_pair(name, new DistMatrixParameter(name, value)));
-//	}
-
-//	void add_distmatrix(string name, DistMatrix * value) {
-//		distmatrix_parameters.insert(std::make_pair(name, new DistMatrixParameter(name, value)));
-//	}
+	void add_matrix(string name, DistMatrix_ptr value) {
+		matrix_parameters.insert(std::make_pair(name, new DistMatrixParameter(name, value)));
+	}
 
 	void add_ptr(string name, void * value) {
 		pointer_parameters.insert(std::make_pair(name, new PointerParameter(name, value)));
 	}
 
 	int get_char(string name) const {
-		return std::dynamic_pointer_cast<CharParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<CharParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	signed char get_signed_char(string name) const {
-		return std::dynamic_pointer_cast<SignedCharParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<SignedCharParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	unsigned char get_unsigned_char(string name) const {
-		return std::dynamic_pointer_cast<UnsignedCharParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<UnsignedCharParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	unsigned char get_byte(string name) const {
-		return std::dynamic_pointer_cast<ByteParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<ByteParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	bool get_bool(string name) const {
-		return std::dynamic_pointer_cast<BoolParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<BoolParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	bool get_logical(string name) const {
-		return std::dynamic_pointer_cast<LogicalParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<LogicalParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	int get_int(string name) const {
-		return std::dynamic_pointer_cast<IntParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<IntParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	int8_t get_integer1(string name) const {
-		return std::dynamic_pointer_cast<Integer1Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<Integer1Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	int16_t get_integer2(string name) const {
-		return std::dynamic_pointer_cast<Integer2Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<Integer2Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	int32_t get_integer4(string name) const {
-		return std::dynamic_pointer_cast<Integer4Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<Integer4Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	int64_t get_integer8(string name) const {
-		return std::dynamic_pointer_cast<Integer8Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<Integer8Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	int8_t get_int8(string name) const {
-		return std::dynamic_pointer_cast<Int8Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<Int8Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	int16_t get_int16(string name) const {
-		return std::dynamic_pointer_cast<Int16Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<Int16Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	int32_t get_int32(string name) const {
-		return std::dynamic_pointer_cast<Int32Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<Int32Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	int64_t get_int64(string name) const {
-		return std::dynamic_pointer_cast<Int64Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<Int64Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	uint8_t get_uint8(string name) const {
-		return std::dynamic_pointer_cast<UInt8Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<UInt8Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	uint16_t get_uint16(string name) const {
-		return std::dynamic_pointer_cast<UInt16Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<UInt16Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	uint32_t get_uint32(string name) const {
-		return std::dynamic_pointer_cast<UInt32Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<UInt32Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	uint64_t get_uint64(string name) const {
-		return std::dynamic_pointer_cast<UInt64Parameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<UInt64Parameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	long get_long(string name) const {
-		return std::dynamic_pointer_cast<LongParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<LongParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	long long get_long_long(string name) const {
-		return std::dynamic_pointer_cast<LongLongParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<LongLongParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	unsigned get_unsigned(string name) const {
-		return std::dynamic_pointer_cast<UnsignedParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<UnsignedParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	unsigned long get_unsigned_long(string name) const {
-		return std::dynamic_pointer_cast<UnsignedLongParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<UnsignedLongParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	unsigned long long get_unsigned_long_long(string name) const {
-		return std::dynamic_pointer_cast<UnsignedLongLongParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<UnsignedLongLongParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	float get_float(string name) const {
-		return std::dynamic_pointer_cast<FloatParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<FloatParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	double get_double(string name) const {
-		return std::dynamic_pointer_cast<DoubleParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<DoubleParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
 	long double get_long_double(string name) const {
-		return std::dynamic_pointer_cast<LongDoubleParameter> (parameters.find(name)->second)->get_value();
+		return std::dynamic_pointer_cast<LongDoubleParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
-	string get_string(string name) const {
-		return std::dynamic_pointer_cast<StringParameter> (parameters.find(name)->second)->get_value();
+	std::string get_string(std::string name) const {
+		return std::dynamic_pointer_cast<StringParameter> (variable_parameters.find(name)->second)->get_value();
 	}
 
-	Matrix_ID get_matrix_ID(string name) const {
-		return std::dynamic_pointer_cast<MatrixIDParameter> (parameters.find(name)->second)->get_value();
+	MatrixInfo get_matrix_info(string name) const {
+		return matrix_info_parameters.find(name)->second;
 	}
 
-	uint32_t get_matrixhandle(string name) const {
-		return matrix_parameters.find(name)->second->get_value();
+	DistMatrix_ptr get_matrix(string name) const {
+		return matrix_parameters.find(name)->second->data;
 	}
-
-//	DistMatrix * get_distmatrix(string name) const {
-//		return distmatrix_parameters.find(name)->second->get_value();
-//	}
 
 	void * get_ptr(string name) const {
 		return pointer_parameters.find(name)->second->get_value();
 	}
 
-	std::map<string, std::shared_ptr<MatrixIDParameter> > get_matrixhandles() const {
-		return matrix_parameters;
-	}
+//	std::map<string, std::shared_ptr<MatrixInfoParameter> > get_matrix_info(string name) const {
+//		return matrix_info_parameters;
+//	}
 
 //	std::map<string, std::shared_ptr<DistMatrixParameter> > get_distmatrices() const {
 //		return distmatrix_parameters;
@@ -1447,9 +1490,9 @@ public:
 	}
 
 private:
-	std::map<string, std::shared_ptr<Parameter> > parameters;
-	std::map<string, std::shared_ptr<MatrixIDParameter> > matrix_parameters;
-//	std::map<string, std::shared_ptr<DistMatrixParameter> > distmatrix_parameters;
+	std::map<string, std::shared_ptr<VariableParameter> > variable_parameters;
+	std::map<string, std::shared_ptr<MatrixInfoParameter> > matrix_info_parameters;
+	std::map<string, std::shared_ptr<DistMatrixParameter> > matrix_parameters;
 	std::map<string, std::shared_ptr<PointerParameter> > pointer_parameters;
 };
 
