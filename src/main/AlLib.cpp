@@ -2,7 +2,7 @@
 
 namespace alchemist {
 
-AlLib::AlLib(MPI_Comm & _world, MPI_Comm & _peers) : Library(_world, _peers)
+AlLib::AlLib(MPI_Comm & _world) : Library(_world)
 {
 	int world_rank, world_size;
 	MPI_Comm_rank(world, &world_rank);
@@ -26,43 +26,6 @@ AlLib::AlLib(MPI_Comm & _world, MPI_Comm & _peers) : Library(_world, _peers)
 
 int AlLib::load()
 {
-
-
-//
-//	freopen("myfile.out","w",stdout);
-//	freopen("myfile.err","w",stderr);
-//	log->info("Poooooooo22222222 {}", world_rank);
-//	  printf ("This sentence is redirected to a file.");
-//	  std::cout << "What about this" << std::endl;
-//	  std::cerr << "and this" << std::endl;
-//		log->info("Poooooooo33333333 {}", world_rank);
-//	  fclose(stdout);
-//	  fclose(stderr);
-//		log->info("Poooooooo444444444 {}", world_rank);
-//	  stdout = fdopen(1, "w");
-////	  stderr = fdopen(2, "w");
-//		freopen(2,"w",stderr);
-
-
-//	auto sink = std::make_shared<spdlog::sinks::simple_file_sink_st>("AlLib.log");
-//	auto log = std::make_shared<spdlog::logger>(name, sink);
-//	log->flush_on(spdlog::level::info);
-//	log->set_level(spdlog::level::info);
-//
-//
-//
-//
-//			auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-//			        console_sink->set_level(spdlog::level::warn);
-//			        console_sink->set_pattern("[multi_sink_example] [%^%l%$] %v");
-//
-//			        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/multisink.txt", true);
-//			        file_sink->set_level(spdlog::level::trace);
-//
-//			        spdlog::logger logger("multi_sink", {console_sink, file_sink});
-//			        logger.set_level(spdlog::level::debug);
-
-
 	log->info("AlLib loaded");
 
 	return 0;
@@ -127,11 +90,11 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 		if (is_driver) {
 
 			int64_t rank = (int64_t) in.get_int32("rank");
-			uint_8t method = in.get_uint8("method");
-			MatrixInfo A = in.get_matrixinfo("A");
+			uint8_t method = in.get_uint8("method");
+			MatrixInfo A = in.get_matrix_info("A");
 
-			uint64_t m = A->getRows();
-			uint64_t n = A->getCols();
+			uint64_t m = A.num_rows;
+			uint64_t n = A.num_cols;
 
 			log->info("Starting truncated SVD on {}x{} matrix", m, n);
 			log->info("Settings:");
@@ -221,10 +184,10 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 		else {
 
 			int64_t rank = (int64_t) in.get_int32("rank");
-			uint_8t method = in.get_uint8("method");
-			ElDistMatrix_ptr A = in.get_matrix("A");
+			uint8_t method = in.get_uint8("method");
+			DistMatrix_ptr A = in.get_distmatrix("A");
 
-			El::Grid & grid = A->Grid();
+			const El::Grid & grid = A->Grid();
 
 			int m = A->Height();
 			int n = A->Width();
@@ -320,10 +283,10 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 					MPI_Bcast(singValsSq.data(), nconv, MPI_DOUBLE, 0, world);
 					log->info("Received the right eigenvectors and the eigenvalues");
 
-					auto U    = std::make_unique<El::DistMatrix<double, El::VR, El::STAR>>(m, nconv, grid);
-					auto S    = std::make_unique<El::DistMatrix<double, El::VR, El::STAR>>(nconv, 1, grid);
-					auto Sinv = std::make_unique<El::DistMatrix<double, El::VR, El::STAR>>(nconv, 1, grid);
-					auto V    = std::make_unique<El::DistMatrix<double, El::VR, El::STAR>>(n, nconv, grid);
+					DistMatrix_ptr U    = std::make_shared<DistMatrix>(m, nconv, grid);
+					DistMatrix_ptr S    = std::make_shared<DistMatrix>(nconv, 1, grid);
+					DistMatrix_ptr Sinv = std::make_shared<DistMatrix>(nconv, 1, grid);
+					DistMatrix_ptr V    = std::make_shared<DistMatrix>(n, nconv, grid);
 
 					log->info("Created new matrix objects to hold U,S,V");
 
@@ -354,19 +317,21 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 					El::DiagonalScale(El::RIGHT, El::NORMAL, *Sinv, *U);
 					log->info("Computed and stored U");
 
+					out.add_distmatrix("S", S);
+					out.add_distmatrix("U", U);
+					out.add_distmatrix("V", V);
+
 					break;
 				}
 			}
 
 			MPI_Barrier(world);
-
-			out.add_matrix("S", S);
-			out.add_matrix("U", U);
-			out.add_matrix("V", V);
 		}
 	}
 
 	return 0;
 
+
+}
 
 }

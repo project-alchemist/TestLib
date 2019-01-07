@@ -29,11 +29,6 @@
 
 namespace alchemist {
 
-typedef El::AbstractDistMatrix<double> DistMatrix;
-typedef std::shared_ptr<DistMatrix> DistMatrix_ptr;
-
-//typedef El::AbstractDistMatrix<double> ElDistMatrix;
-
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
