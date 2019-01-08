@@ -41,11 +41,11 @@ struct GridObj {
 
 using std::string;
 
-struct AlLib : Library {
+struct TestLib : Library {
 
-	AlLib(MPI_Comm & world);
+	TestLib(MPI_Comm & world);
 
-	~AlLib() { }
+	~TestLib() { }
 
 	Log_ptr log;
 
@@ -59,11 +59,11 @@ struct AlLib : Library {
 
 // Class factories
 extern "C" void * create(MPI_Comm & world) {
-	return reinterpret_cast<void*>(new AlLib(world));
+	return reinterpret_cast<void*>(new TestLib(world));
 }
 
 extern "C" void destroy(void * p) {
-    delete reinterpret_cast<AlLib*>(p);
+    delete reinterpret_cast<TestLib*>(p);
 }
 
 }

@@ -2,7 +2,7 @@
 
 namespace alchemist {
 
-AlLib::AlLib(MPI_Comm & _world) : Library(_world)
+TestLib::TestLib(MPI_Comm & _world) : Library(_world)
 {
 	int world_rank, world_size;
 	MPI_Comm_rank(world, &world_rank);
@@ -24,21 +24,21 @@ AlLib::AlLib(MPI_Comm & _world) : Library(_world)
 //	log->info("Po1 {}/{}", world_rank, world_size);
 }
 
-int AlLib::load()
+int TestLib::load()
 {
-	log->info("AlLib loaded");
+	log->info("TestLib loaded");
 
 	return 0;
 }
 
-int AlLib::unload()
+int TestLib::unload()
 {
-	log->info("AlLib unloaded");
+	log->info("TestLib unloaded");
 
 	return 0;
 }
 
-int AlLib::run(string & task_name, Parameters & in, Parameters & out)
+int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 {
 	// Get the rank and size in the original communicator
 	int world_rank, world_size;
@@ -60,6 +60,7 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 		out.add_uint64("new_rank", new_rank);
 		out.add_string("vv", vv);
 
+		MPI_Barrier(world);
 	}
 	else if (task_name.compare("kmeans") == 0) {
 
@@ -86,15 +87,17 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 	}
 	else if (task_name.compare("truncated_svd") == 0) {
 
-
 		if (is_driver) {
 
-			int64_t rank = (int64_t) in.get_int32("rank");
-			uint8_t method = in.get_uint8("method");
+			int rank = (int) in.get_int32("rank");
+			uint8_t method = 1;
 			MatrixInfo A = in.get_matrix_info("A");
 
 			uint64_t m = A.num_rows;
 			uint64_t n = A.num_cols;
+
+			if (rank > m) rank = m;
+			if (rank > n) rank = n;
 
 			log->info("Starting truncated SVD on {}x{} matrix", m, n);
 			log->info("Settings:");
@@ -121,7 +124,7 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 			ARrcSymStdEig<double> prob(n, rank, "LM");
 			uint8_t command;
 			std::vector<double> zerosVector(n);
-			for (uint32_t idx = 0; idx < n; idx++)
+			for(uint32_t idx = 0; idx < n; idx++)
 				zerosVector[idx] = 0;
 
 			uint32_t iterNum = 0;
@@ -129,7 +132,7 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 			while (!prob.ArnoldiBasisFound()) {
 				prob.TakeStep();
 				++iterNum;
-				if (iterNum % 20 == 0) log->info("Computed {} matrix-vector products", iterNum);
+				if(iterNum % 20 == 0) log->info("Computed {} matrix-vector products", iterNum);
 				if (prob.GetIdo() == 1 || prob.GetIdo() == -1) {
 					command = 1;
 
@@ -137,14 +140,13 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 					if (method == 0 || method == 1) {
 						auto temp = prob.GetVector();
 						MPI_Bcast(prob.GetVector(), n, MPI_DOUBLE, 0, world);
-		//				auto z = zerosVector.data();
 						MPI_Reduce(zerosVector.data(), prob.PutVector(), n, MPI_DOUBLE, MPI_SUM, 0, world);
 						auto temp1 = prob.GetVector();
 					}
 					if (method == 2) {
 		//				MPI_Status status;
-		//				MPI_Send(prob.GetVector(), n, MPI_DOUBLE, 1, 0, world);
-		//				MPI_Recv(prob.PutVector(), n, MPI_DOUBLE, 1, 0, world, status);
+		//				MPI_Send(prob.GetVector(), n, MPI_DOUBLE, 1, 0, group);
+		//				MPI_Recv(prob.PutVector(), n, MPI_DOUBLE, 1, 0, group, status);
 		////				world.send(1, 0, prob.GetVector(), n);
 		////				world.recv(1, 0, prob.PutVector(), n);
 					}
@@ -156,12 +158,12 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 			uint32_t niters = prob.GetIter();
 			log->info("Done after {} Arnoldi iterations, converged to {} eigenvectors of size {}", niters, nconv, n);
 
-			// NB: it may be the case that n*nconv > 4 GB, then have to be careful!
+			//NB: it may be the case that n*nconv > 4 GB, then have to be careful!
 			// assuming tall and skinny A for now
 			MatrixXd rightVecs(n, nconv);
 			log->info("Allocated matrix for right eigenvectors of A'*A");
 			// Eigen uses column-major layout by default!
-			for (uint32_t idx = 0; idx < nconv; idx++)
+			for(uint32_t idx = 0; idx < nconv; idx++)
 				std::memcpy(rightVecs.col(idx).data(), prob.RawEigenvector(idx), n*sizeof(double));
 			log->info("Copied right eigenvectors into allocated storage");
 
@@ -169,22 +171,23 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 			command = 2;
 			MPI_Bcast(&command, 1, MPI_UNSIGNED_CHAR, 0, world);
 			MPI_Bcast(&nconv, 1, MPI_UNSIGNED, 0, world);
+		//	mpi::broadcast(world, nconv, 0);
 			log->info("Broadcasted command and number of converged eigenvectors");
 			MPI_Bcast(rightVecs.data(), n*nconv, MPI_DOUBLE, 0, world);
+		//	mpi::broadcast(world, rightVecs.data(), n*nconv, 0);
 			log->info("Broadcasted right eigenvectors");
 			auto ng = prob.RawEigenvalues();
 			MPI_Bcast(prob.RawEigenvalues(), nconv, MPI_DOUBLE, 0, world);
 			log->info("Broadcasted eigenvalues");
 
-
-			log->info("Waiting on workers to store U,S,V");
+			log->info("Waiting on workers to store U, S, and V");
 
 			MPI_Barrier(world);
 		}
 		else {
 
-			int64_t rank = (int64_t) in.get_int32("rank");
-			uint8_t method = in.get_uint8("method");
+			int rank = (int) in.get_int32("rank");
+			uint8_t method = 1;
 			DistMatrix_ptr A = in.get_distmatrix("A");
 
 			const El::Grid & grid = A->Grid();
@@ -192,13 +195,16 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 			int m = A->Height();
 			int n = A->Width();
 
+			if (rank > m) rank = m;
+			if (rank > n) rank = n;
+
 			MPI_Barrier(world);
 
 			log->info("Starting truncated SVD");
 
-		//	  int LOCALEIGS = 0; // TODO: make these an enumeration, and global to Alchemist
-		//	  int LOCALEIGSPRECOMPUTE = 1;
-		//	  int DISTEIGS = 2;
+			//	  int LOCALEIGS = 0; // TODO: make these an enumeration, and global to Alchemist
+			//	  int LOCALEIGSPRECOMPUTE = 1;
+			//	  int DISTEIGS = 2;
 
 			// Assume matrix is row-partitioned b/c relaying it out doubles memory requirements
 
@@ -211,8 +217,8 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 			if (method == 1) {
 				localGramChunk.Resize(n, n);
 				log->info("Computing the local contribution to A'*A");
-				log->info("Local matrix's dimensions are {}, {}", A->LockedMatrix().Height(), A->LockedMatrix().Width());
-				log->info("Storing A'*A in {},{} matrix", n, n);
+				log->info("Local matrix's dimensions are {}x{}", A->LockedMatrix().Height(), A->LockedMatrix().Width());
+				log->info("Storing A'*A in {}x{} matrix", n, n);
 				auto startFillLocalMat = std::chrono::system_clock::now();
 				if (A->LockedMatrix().Height() > 0)
 					El::Gemm(El::TRANSPOSE, El::NORMAL, 1.0, A->LockedMatrix(), A->LockedMatrix(), 0.0, localGramChunk);
@@ -228,15 +234,16 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 			El::Matrix<double> localintermed(A->LocalHeight(), 1);
 			El::Matrix<double> localy(n, 1);
 			localx.LockedAttach(n, 1, vecIn.get(), 1);
-//			auto distx = new DistMatrix(n, 1, grid);
-//			auto distintermed = new DistMatrix(m, 1, grid);
-			auto distx = El::DistMatrix<double, El::STAR, El::STAR>(n, 1, grid);
-			auto distintermed = El::DistMatrix<double, El::STAR, El::STAR>(m, 1, grid);
+			auto distx = new DistMatrix(n, 1, grid);
+			auto distintermed = new DistMatrix(m, 1, grid);
+		//	auto distx = El::DistMatrix<double, El::STAR, El::STAR>(n, 1, self->grid);
+		//	auto distintermed = El::DistMatrix<double, El::STAR, El::STAR>(m, 1, self->grid);
 
 			log->info("Finished initialization for truncated SVD");
 
-			while (true) {
+			while(true) {
 				MPI_Bcast(&command, 1, MPI_UNSIGNED_CHAR, 0, world);
+		//		mpi::broadcast(self->world, command, 0);
 				if (command == 1 && method == 0) {
 					void * uut;
 					MPI_Bcast(vecIn.get(), n, MPI_DOUBLE, 0, world);
@@ -288,7 +295,7 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 					DistMatrix_ptr Sinv = std::make_shared<DistMatrix>(nconv, 1, grid);
 					DistMatrix_ptr V    = std::make_shared<DistMatrix>(n, nconv, grid);
 
-					log->info("Created new matrix objects to hold U,S,V");
+					log->info("Created new matrix objects to hold U, S, and V");
 
 					// populate V
 					for (El::Int rowIdx = 0; rowIdx < n; rowIdx++)
@@ -308,11 +315,11 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 					log->info("Stored V and S");
 
 					// form U
-					log->info("computing A*V = U*Sigma");
-					log->info("A is {}-by-{}, V is {}-by-{}, the resulting matrix should be {}-by-{}", A->Height(), A->Width(), V->Height(), V->Width(), U->Height(), U->Width());
+					log->info("Computing A*V = U*Sigma");
+					log->info("A is {}x{}, V is {}x{}, U will be {}x{}", A->Height(), A->Width(), V->Height(), V->Width(), U->Height(), U->Width());
 					//Gemm(1.0, *workingMat, *V, 0.0, *U, self->log);
 					El::Gemm(El::NORMAL, El::NORMAL, 1.0, *A, *V, 0.0, *U);
-					log->info("done computing A*V, rescaling to get U");
+					log->info("Done computing A*V, rescaling to get U");
 					// TODO: do a QR instead to ensure stability, but does column pivoting so would require postprocessing S,V to stay consistent
 					El::DiagonalScale(El::RIGHT, El::NORMAL, *Sinv, *U);
 					log->info("Computed and stored U");
@@ -321,17 +328,16 @@ int AlLib::run(string & task_name, Parameters & in, Parameters & out)
 					out.add_distmatrix("U", U);
 					out.add_distmatrix("V", V);
 
+
 					break;
 				}
 			}
-
 			MPI_Barrier(world);
 		}
+		log->info("Completed truncated SVD task");
 	}
 
 	return 0;
-
-
 }
 
 }
