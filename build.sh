@@ -8,7 +8,6 @@ then
 else
 	export TESTLIB=$TESTLIB_PATH/target/testlib.so"
 fi
-export TESTLIB=$TESTLIB_PATH/target/testlib
 
 CURR_DIR=$PWD
 
