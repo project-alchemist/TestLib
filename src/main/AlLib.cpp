@@ -12,13 +12,13 @@ TestLib::TestLib(MPI_Comm & _world) : Library(_world)
 	auto name = (is_driver) ? "TestLib driver" : "TestLib worker " + std::to_string(world_rank);
 
 	if (is_driver) {
-		log = start_log("TestLib driver", "[%Y-%m-%d %H:%M:%S.%e] [%n] [%l]        %v");
+		log = start_log("TestLib driver", "[%Y-%m-%d %H:%M:%S.%e] [%n] [%l]        %^%v%$", regular, white);
 	}
 	else {
 		char buffer[12];
 		sprintf(buffer, "TestLib worker-%03d", (uint16_t) world_rank);
 
-		log = start_log(string(buffer), "[%Y-%m-%d %H:%M:%S.%e] [%n] [%l]    %v");
+		log = start_log(string(buffer), "[%Y-%m-%d %H:%M:%S.%e] [%n] [%l]    %^%v%$", italic, white);
 	}
 
 //	log->info("Po1 {}/{}", world_rank, world_size);
