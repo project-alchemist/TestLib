@@ -65,8 +65,9 @@ typedef enum _datatype : uint8_t {
 	STRING,
 	WSTRING,
 	COMMAND_CODE,
-	MATRIX_ID,
 	LIBRARY_ID,
+	MATRIX_ID,
+	MATRIX_INFO,
 	DISTMATRIX,
 	VOID_POINTER
 } datatype;
@@ -156,27 +157,50 @@ struct MatrixInfo {
 	Matrix_ID ID;
 
 	string name;
-	uint64_t num_rows;
-	uint64_t num_cols;
+	uint64_t num_rows, num_cols;
+	bool sparse;
+	uint8_t layout, num_partitions;
 
-	explicit MatrixInfo() : ID(0), num_rows(0), num_cols(0) { }
+	Worker_ID * row_assignments;
+
+	explicit MatrixInfo() : ID(0), name(""), num_rows(1), num_cols(1), sparse(false), layout(0), num_partitions(0), row_assignments(nullptr) {
+		row_assignments = new Worker_ID[num_rows]();
+	}
 
 	MatrixInfo(Matrix_ID _ID, uint64_t _num_rows, uint64_t _num_cols) :
-		MatrixInfo(_ID, "", _num_rows, _num_cols) { }
+		ID(_ID), name(""), num_rows(_num_rows), num_cols(_num_cols), sparse(false), layout(0), num_partitions(0), row_assignments(nullptr) {
+		row_assignments = new Worker_ID[num_rows]();
+	}
 
 	MatrixInfo(Matrix_ID _ID, string _name, uint64_t _num_rows, uint64_t _num_cols) :
-		ID(_ID), name(_name), num_rows(_num_rows), num_cols(_num_cols) { }
+		ID(_ID), name(_name), num_rows(_num_rows), num_cols(_num_cols), sparse(false), layout(0), num_partitions(0), row_assignments(nullptr) {
+		row_assignments = new Worker_ID[num_rows]();
+	}
+	MatrixInfo(Matrix_ID _ID, string _name, uint64_t _num_rows, uint64_t _num_cols, bool _sparse, uint8_t _layout, uint8_t _num_partitions) :
+		ID(_ID), name(_name), num_rows(_num_rows), num_cols(_num_cols), sparse(_sparse), layout(0), num_partitions(_num_partitions), row_assignments(nullptr) {
+		std::cout << "SHFHSH" << std::endl;
+		row_assignments = new Worker_ID[num_rows]();
+		std::cout << "SHFHSH gg" << std::endl;
+	}
 
-	~MatrixInfo() { }
+	~MatrixInfo() {
+		delete [] row_assignments; row_assignments = nullptr;
+	}
 
-	string to_string() const {
+	string to_string(bool display_layout=false) const {
 		std::stringstream ss;
 
-		ss << "Matrix " << name << " (ID: " << ID << ", dim: " << num_rows << " x " << num_cols << ")";
+		ss << "Matrix " << name << " (ID: " << ID << ", dim: " << num_rows << " x " << num_cols << ", sparse: " << (uint16_t) sparse << ", # partitions: " << (uint16_t) num_partitions << ")";
+		if (display_layout) {
+			ss << std::endl << "Layout: " << std::endl;
+			for (uint64_t i = 0; i < num_rows; i++) ss << (uint16_t) row_assignments[i] << " ";
+		}
 
 		return ss.str();
 	}
 };
+
+typedef std::shared_ptr<MatrixInfo> MatrixInfo_ptr;
 
 typedef El::DistMatrix<double> DistMatrix;
 typedef std::shared_ptr<El::AbstractDistMatrix<double>> DistMatrix_ptr;
@@ -1074,20 +1098,20 @@ protected:
 struct MatrixInfoParameter : Parameter {
 public:
 
-	MatrixInfoParameter(string _name, MatrixInfo _value) : Parameter(_name, MATRIX_ID), value(_value) { }
+	MatrixInfoParameter(string _name, MatrixInfo_ptr _value) : Parameter(_name, MATRIX_INFO), value(_value) { }
 
 	~MatrixInfoParameter() { }
 
-	MatrixInfo get_value() const {
+	MatrixInfo_ptr get_value() const {
 		return value;
 	}
 
 	string to_string() const {
-		return value.to_string();
+		return value->to_string();
 	}
 
 protected:
-	MatrixInfo value;
+	MatrixInfo_ptr value;
 };
 
 struct DistMatrixParameter : Parameter {
@@ -1194,7 +1218,7 @@ public:
 		return (uint8_t) ptr_names.size();
 	}
 
- 	int num() const {
+	int num() const {
 		return parameters.size();
 	}
 
@@ -1398,7 +1422,7 @@ public:
 		parameters.insert(std::make_pair(name, new WStringParameter(name, value)));
 	}
 
-	void add_matrix_info(string name, const MatrixInfo & value) {
+	void add_matrix_info(string name, const MatrixInfo_ptr value) {
 		matrix_info_names.push_back(name);
 		parameters.insert(std::make_pair(name, new MatrixInfoParameter(name, value)));
 	}
@@ -1525,7 +1549,7 @@ public:
 		return std::dynamic_pointer_cast<StringParameter>(parameters.find(name)->second)->get_value();
 	}
 
-	MatrixInfo get_matrix_info(string name) const {
+	MatrixInfo_ptr get_matrix_info(string name) const {
 		return std::dynamic_pointer_cast<MatrixInfoParameter>(parameters.find(name)->second)->get_value();
 	}
 

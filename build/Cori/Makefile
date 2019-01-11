@@ -1,40 +1,47 @@
 include $(ELEMENTAL_PATH)/conf/ElVars
 
-SRC_PATH = $(ALCHEMIST_PATH)/src/main
-TARGET_PATH = $(ALCHEMIST_PATH)/target
+SRC_PATH = $(TESTLIB_PATH)/src/main
+TARGET_PATH = $(TESTLIB_PATH)/target
 
-# Put Elemental's CXXFLAGS in front so ours can override them
+# Put Elemental's CXXFLAGS in front so ours can override them     "-I$(SRC_PATH)/ml" "-I$(SRC_PATH)/ml/clustering" "-I$(SRC_PATH)/nla"
 CXXFLAGS += $(EL_COMPILE_FLAGS) -fdiagnostics-color=always
 CXXFLAGS += -Wno-unused -Wno-reorder -std=c++11 -fext-numeric-literals -fopenmp
-CXXFLAGS += "-I$(ELEMENTAL_PATH)/include" "-I$(SPDLOG_PATH)/include"
-CXXFLAGS += "-I$(BOOST_DIR)/include"									# some environments (e.g. Cori) require this to find boost
+CXXFLAGS += "-I$(SRC_PATH)/include" "-I$(SRC_PATH)/utility"
+CXXFLAGS += "-I$(ELEMENTAL_PATH)/include" "-I$(SPDLOG_PATH)/include" "-I$(EIGEN3_PATH)/include" "-I$(ARPACK_PATH)/include"
 
 LDFLAGS += "-L$(EL_LIB)" "-Wl,-rpath,$(EL_LIB)" $(EL_LIBS)
-LDFLAGS += -lboost_serialization -lboost_mpi -lboost_system -lboost_thread 
-LDFLAGS += -Wl,-rpath,$(SPDLOG_PATH)/lib
-LDFLAGS += -Wl,-rpath,$(BOOST_DIR)/lib "-L$(BOOST_DIR)/lib"			# some environments (e.g. Cori) require this to find boost
-LDFLAGS += -Wl,-rpath,/opt/intel/compilers_and_libraries_2016.3.210/linux/compiler/lib/intel64_lin/ -L/opt/intel/compilers_and_libraries_2016.3.210/linux/compiler/lib/intel64_lin/ -lirc
+LDFLAGS += "-Wl,-rpath,$(SPDLOG_PATH)/lib"
+LDFLAGS += "-Wl,-rpath,$(ARPACK_PATH)/lib" -larpack
+LDFLAGS += -lmpi
+	
+#MODULES   := main main/ml/clustering main/nla
+MODULES   := main
+SRC_DIR   := $(addprefix $(TESTLIB_PATH)/src/,$(MODULES))
+BUILD_DIR := $(addprefix $(TESTLIB_PATH)/target/,$(MODULES))
 
-OBJ_FILES = \
-	$(TARGET_PATH)/main.o \
-	$(TARGET_PATH)/Session.o \
-	$(TARGET_PATH)/Server.o \
-	$(TARGET_PATH)/Executor.o \
-	$(TARGET_PATH)/Driver.o \
-	$(TARGET_PATH)/Worker.o
+SRC       := $(foreach sdir,$(SRC_DIR),$(wildcard $(sdir)/*.cpp))
+OBJ       := $(patsubst src/%.cpp,target/%.o,$(SRC))
 
-$(TARGET_PATH)/%.o: $(SRC_PATH)/%.cpp
-	$(CXX) -c $(CXXFLAGS) -D_GLIBCXX_USE_CXX11_ABI=1 $< -o $@
+vpath %.cpp $(SRC_DIR)
+
+define make-goal
+$1/%.o: %.cpp
+	$(CXX) $(CXXFLAGS) -c $$< -o $$@
+endef
 
 .PHONY: default
-default: $(TARGET_PATH)/alchemist
 
-$(TARGET_PATH)/alchemist: $(TARGET_PATH) $(OBJ_FILES)
-	$(CXX) -dynamic $(CXXFLAGS) -D_GLIBCXX_USE_CXX11_ABI=1 -o $@ $(OBJ_FILES) $(LDFLAGS)
+default: checkdirs $(TARGET_PATH)/testlib.so
 
-$(TARGET_PATH):
-	mkdir -p $(TARGET_PATH)
+$(TARGET_PATH)/testlib.so: $(OBJ)
+	$(CXX) -shared $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
-.PHONY: clean
+checkdirs: $(BUILD_DIR)
+
+$(BUILD_DIR):
+	mkdir -p $@
+
 clean:
-	rm -rf $(TARGET_PATH)
+	rm -rf $(BUILD_DIR)
+
+$(foreach bdir,$(BUILD_DIR),$(eval $(call make-goal,$(bdir))))

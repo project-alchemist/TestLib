@@ -10,7 +10,6 @@ CXXFLAGS += "-I$(SRC_PATH)/include" "-I$(SRC_PATH)/utility"
 CXXFLAGS += "-I$(ELEMENTAL_PATH)/include" "-I$(EIGEN3_PATH)/include" "-I$(ARPACK_PATH)/include"
 
 LDFLAGS += "-L$(EL_LIB)" "-Wl,-rpath,$(EL_LIB)" $(EL_LIBS)
-LDFLAGS += -lboost_serialization-mt -lboost_mpi-mt -lboost_system-mt -lboost_thread-mt
 LDFLAGS += "-Wl,-rpath,$(ARPACK_PATH)/lib" -larpack
 LDFLAGS += -lmpi
 	
