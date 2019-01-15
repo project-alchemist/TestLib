@@ -1,12 +1,13 @@
 #!/bin/bash
+set -o errexit
 
 source ./config.sh
 
 if [ "$SYSTEM" == "MacOS" ]
 then
-	export TESTLIB=$TESTLIB_PATH/target/testlib.dylib"
+	export TESTLIB=$TESTLIB_PATH/target/testlib.dylib
 else
-	export TESTLIB=$TESTLIB_PATH/target/testlib.so"
+	export TESTLIB=$TESTLIB_PATH/target/testlib.so
 fi
 
 CURR_DIR=$PWD
@@ -24,7 +25,7 @@ echo " "
 echo "Creating TestLib shared object:"
 echo " "
 cd ./build/$SYSTEM/
-make
+nice make -j4
 cd ../..
 echo " "
 echo $LINE

@@ -38,7 +38,7 @@ $(TARGET_PATH)/testlib.so: $(OBJ)
 checkdirs: $(BUILD_DIR)
 
 $(BUILD_DIR):
-	mkdir -p $(TARGET_PATH)$@
+	mkdir -p $@
 
 clean:
 	rm -rf $(BUILD_DIR)
