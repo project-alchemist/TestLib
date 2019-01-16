@@ -3,7 +3,7 @@
 
 source ./config.sh
 
-if [ "$SYSTEM" == "MacOS" ]
+if [ "$SYSTEM" == "MacOS" ];
 then
 	export TESTLIB=$TESTLIB_PATH/target/testlib.dylib
 else
