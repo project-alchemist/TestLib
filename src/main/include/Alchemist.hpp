@@ -1592,7 +1592,7 @@ struct Library {
 
 typedef std::shared_ptr<Library> Library_ptr;
 
-#pragma once
+//#pragma once
 
 //#ifdef  __cplusplus
 extern "C" {
