@@ -1599,15 +1599,6 @@ extern "C" {
 #endif
 
 void * create_library(MPI_Comm &);
-
-#ifdef  __cplusplus
-}
-#endif
-
-#ifdef  __cplusplus
-extern "C" {
-#endif
-
 void destroy_library(void *);
 
 #ifdef  __cplusplus
