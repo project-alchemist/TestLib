@@ -1594,25 +1594,25 @@ typedef std::shared_ptr<Library> Library_ptr;
 
 //#pragma once
 
-//#ifdef  __cplusplus
+#ifdef  __cplusplus
 extern "C" {
-//#endif
+#endif
 
-void * create(MPI_Comm &);
+void * create_library(MPI_Comm &);
 
-//#ifdef  __cplusplus
+#ifdef  __cplusplus
 }
-//#endif
+#endif
 
-//#ifdef  __cplusplus
+#ifdef  __cplusplus
 extern "C" {
-//#endif
+#endif
 
-void destroy(void *);
+void destroy_library(void *);
 
-//#ifdef  __cplusplus
+#ifdef  __cplusplus
 }
-//#endif
+#endif
 
 
 }
