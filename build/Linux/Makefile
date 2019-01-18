@@ -33,7 +33,7 @@ endef
 default: checkdirs $(TARGET_PATH)/testlib.so
 
 $(TARGET_PATH)/testlib.so: $(OBJ)
-	$(CXX) -shared $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -shared $^ -o $@ $(LDFLAGS)
 
 checkdirs: $(BUILD_DIR)
 
