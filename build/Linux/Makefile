@@ -12,7 +12,7 @@ CXXFLAGS += "-I$(ELEMENTAL_PATH)/include" "-I$(SPDLOG_PATH)/include" "-I$(EIGEN3
 LDFLAGS += "-L$(EL_LIB)" "-Wl,-rpath,$(EL_LIB)" $(EL_LIBS)
 LDFLAGS += "-Wl,-rpath,$(SPDLOG_PATH)/lib"
 LDFLAGS += "-Wl,-rpath,$(ARPACK_PATH)/lib"
-LDFLAGS += -lmpi
+LDFLAGS +=  -ldl -lmpi
 
 MODULES   := main
 SRC_DIR   := $(addprefix $(TESTLIB_PATH)/src/,$(MODULES))
@@ -33,7 +33,7 @@ endef
 default: checkdirs $(TARGET_PATH)/testlib.so
 
 $(TARGET_PATH)/testlib.so: $(OBJ)
-	$(CXX) $(CXXFLAGS) -shared $^ -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $^ -shared -o $@ $(LDFLAGS)
 
 checkdirs: $(BUILD_DIR)
 
