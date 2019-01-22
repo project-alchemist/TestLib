@@ -7,7 +7,7 @@ TARGET_PATH = $(TESTLIB_PATH)/target
 CXXFLAGS += $(EL_COMPILE_FLAGS) -fdiagnostics-color=always
 CXXFLAGS += -Wno-unused -Wno-reorder -std=c++11 -fext-numeric-literals -fopenmp
 CXXFLAGS += "-I$(SRC_PATH)/include" "-I$(SRC_PATH)/utility"
-CXXFLAGS += "-I$(ELEMENTAL_PATH)/include" "-I$(EIGEN_PATH)/include" "-I$(ARPACK_PATH)/include"
+CXXFLAGS += "-I$(ELEMENTAL_PATH)/include" "-I$(EIGEN3_PATH)/include" "-I$(ARPACK_PATH)/include"
 
 LDFLAGS += "-L$(EL_LIB)" "-Wl,-rpath,$(EL_LIB)" $(EL_LIBS)
 LDFLAGS += "-Wl,-rpath,$(SPDLOG_PATH)/lib"
