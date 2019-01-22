@@ -25,7 +25,7 @@ vpath %.cpp $(SRC_DIR)
 
 define make-goal
 $1/%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $$< -o $$@
+	$(CXX) $(CXXFLAGS) -D_GLIBCXX_USE_CXX11_ABI=1 -c $$< -o $$@
 endef
 
 .PHONY: default
@@ -33,7 +33,7 @@ endef
 default: checkdirs $(TARGET_PATH)/testlib.so
 
 $(TARGET_PATH)/testlib.so: $(OBJ)
-	$(CXX) -shared $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $^ -shared -o $@ $(LDFLAGS)
 
 checkdirs: $(BUILD_DIR)
 
