@@ -15,7 +15,7 @@ TestLib::TestLib(MPI_Comm & _world) : Library(_world)
 		log = start_log("TestLib driver", "[%Y-%m-%d %H:%M:%S.%e] [%n] [%l]        %^%v%$", regular, white);
 	}
 	else {
-		char buffer[18];
+		char buffer[19];
 		sprintf(buffer, "TestLib worker-%03d", (uint8_t) world_rank);
 
 		log = start_log(string(buffer), "[%Y-%m-%d %H:%M:%S.%e] [%n] [%l]    %^%v%$", italic, white);
