@@ -121,10 +121,13 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 				break;
 			}
 
+			log->info("U -2");
 			ARrcSymStdEig<double> prob(n, rank, "LM");
+			log->info("U -1");
 			uint8_t command;
 			std::vector<double> zerosVector(n);
-			for(uint32_t idx = 0; idx < n; idx++)
+			log->info("U 0");
+			for (uint32_t idx = 0; idx < n; idx++)
 				zerosVector[idx] = 0.0;
 
 			log->info("U 1");
