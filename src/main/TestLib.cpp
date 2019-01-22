@@ -16,7 +16,7 @@ TestLib::TestLib(MPI_Comm & _world) : Library(_world)
 	}
 	else {
 		char buffer[18];
-		sprintf(buffer, "TestLib worker-%03d", (uint16_t) world_rank);
+		sprintf(buffer, "TestLib worker-%03d", (uint8_t) world_rank);
 
 		log = start_log(string(buffer), "[%Y-%m-%d %H:%M:%S.%e] [%n] [%l]    %^%v%$", italic, white);
 	}
