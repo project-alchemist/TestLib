@@ -121,7 +121,7 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 				break;
 			}
 
-			log->info("U -2");
+			log->info("U -2 {} {}", n, rank);
 			ARrcSymStdEig<double> prob(n, rank, "LM");
 			log->info("U -1");
 			uint8_t command;
