@@ -1592,14 +1592,14 @@ struct Library {
 
 typedef std::shared_ptr<Library> Library_ptr;
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
 void * create_library(MPI_Comm &);
 void destroy_library(void *);
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif
 

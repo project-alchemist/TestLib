@@ -49,7 +49,7 @@ struct TestLib : Library {
 };
 
 // Class factories
-#ifdef  __cplusplus
+#ifdef __cplusplus
 extern "C" {
 #endif
 
@@ -61,11 +61,9 @@ void destroy_library(void * p) {
 	delete reinterpret_cast<TestLib*>(p);
 }
 
-#ifdef  __cplusplus
+#ifdef __cplusplus
 }
 #endif
-}
-
 }
 
 #endif // TESTLIB_HPP
