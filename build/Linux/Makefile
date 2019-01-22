@@ -3,10 +3,8 @@ include $(ELEMENTAL_PATH)/conf/ElVars
 SRC_PATH = $(TESTLIB_PATH)/src/main
 TARGET_PATH = $(TESTLIB_PATH)/target
 
-CXX = g++-7
-
-#CXXFLAGS += -fdiagnostics-color=always
-#CXXFLAGS += -Wno-unused -Wno-reorder -std=c++11 -fext-numeric-literals -fopenmp
+CXXFLAGS += $(EL_COMPILE_FLAGS) -fdiagnostics-color=always
+CXXFLAGS += -Wno-unused -Wno-reorder -std=c++11 -fext-numeric-literals -fopenmp
 CXXFLAGS += "-I$(SRC_PATH)/include" "-I$(SRC_PATH)/utility"
 CXXFLAGS += "-I$(ELEMENTAL_PATH)/include" "-I$(SPDLOG_PATH)/include" "-I$(EIGEN3_PATH)/include" "-I$(ARPACK_PATH)/include"
 CXXFLAGS += -fPIC
