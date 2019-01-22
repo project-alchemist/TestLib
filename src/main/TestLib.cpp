@@ -125,18 +125,21 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 			uint8_t command;
 			std::vector<double> zerosVector(n);
 			for(uint32_t idx = 0; idx < n; idx++)
-				zerosVector[idx] = 0;
+				zerosVector[idx] = 0.0;
 
+			log->info("U 1");
 			uint32_t iterNum = 0;
 
 			while (!prob.ArnoldiBasisFound()) {
+				log->info("U 2");
 				prob.TakeStep();
 				++iterNum;
-				if(iterNum % 20 == 0) log->info("Computed {} matrix-vector products", iterNum);
+				if (iterNum % 20 == 0) log->info("Computed {} matrix-vector products", iterNum);
 				if (prob.GetIdo() == 1 || prob.GetIdo() == -1) {
 					command = 1;
 
 					MPI_Bcast(&command, 1, MPI_UNSIGNED_CHAR, 0, world);
+					log->info("U 3");
 					if (method == 0 || method == 1) {
 						auto temp = prob.GetVector();
 						MPI_Bcast(prob.GetVector(), n, MPI_DOUBLE, 0, world);
