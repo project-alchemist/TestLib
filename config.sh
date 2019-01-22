@@ -2,7 +2,7 @@
 
 # Configuration file for building TestLib
 
-# export SYSTEM="MacOS"                # Options: MacOS, Cori, Linux
+# export SYSTEM="Linux"                # Options: MacOS, Cori, Linux
 if [ "$SYSTEM" = "" ]; then
   export SYSTEM="MacOS"
 fi
@@ -24,7 +24,7 @@ elif [ "$SYSTEM" == "Cori" ]; then
 	
 elif [ "$SYSTEM" == "Linux" ]; then
 	export TESTLIB_PATH=/usr/local/TestLib
-	
+
 	export ELEMENTAL_PATH=/usr/local/elemental
 	export SPDLOG_PATH=/usr/local/spdlog
 	export EIGEN3_PATH=/usr/local/eigen3
