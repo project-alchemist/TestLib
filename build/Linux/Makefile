@@ -11,7 +11,7 @@ CXXFLAGS += -fPIC
 
 LDFLAGS += "-L$(EL_LIB)" "-Wl,-rpath,$(EL_LIB)" $(EL_LIBS)
 LDFLAGS += "-Wl,-rpath,$(SPDLOG_PATH)/lib"
-LDFLAGS += "-Wl,-rpath,$(ARPACK_PATH)/lib"
+LDFLAGS += "-Wl,-rpath,$(ARPACK_PATH)/lib" -larpack
 LDFLAGS +=  -lmpi
 
 MODULES   := main

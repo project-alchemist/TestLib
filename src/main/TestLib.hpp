@@ -61,7 +61,7 @@ void destroy_library(void * p) {
 	delete reinterpret_cast<TestLib*>(p);
 }
 
-void debug_() { } 		// Ugly hack needed to get this to load on Ubuntu
+void debug_() { } 		// Hack needed to get this to load on Ubuntu
 
 #ifdef __cplusplus
 }
