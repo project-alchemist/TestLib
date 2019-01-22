@@ -49,14 +49,21 @@ struct TestLib : Library {
 };
 
 // Class factories
+#ifdef  __cplusplus
 extern "C" {
-	void * create_library(MPI_Comm & world) {
-		return reinterpret_cast<void*>(new TestLib(world));
-	}
+#endif
 
-	void destroy_library(void * p) {
-		delete reinterpret_cast<TestLib*>(p);
-	}
+void * create_library(MPI_Comm & world) {
+	return reinterpret_cast<void*>(new TestLib(world));
+}
+
+void destroy_library(void * p) {
+	delete reinterpret_cast<TestLib*>(p);
+}
+
+#ifdef  __cplusplus
+}
+#endif
 }
 
 }

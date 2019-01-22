@@ -1592,8 +1592,6 @@ struct Library {
 
 typedef std::shared_ptr<Library> Library_ptr;
 
-//#pragma once
-
 #ifdef  __cplusplus
 extern "C" {
 #endif
