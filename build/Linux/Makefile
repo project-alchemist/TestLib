@@ -3,7 +3,7 @@ include $(ELEMENTAL_PATH)/conf/ElVars
 SRC_PATH = $(TESTLIB_PATH)/src/main
 TARGET_PATH = $(TESTLIB_PATH)/target
 
-CXX = /usr/local/bin/g++-7
+CXX = g++-7
 
 CXXFLAGS += -fdiagnostics-color=always
 CXXFLAGS += -Wno-unused -Wno-reorder -std=c++11 -fext-numeric-literals -fopenmp
