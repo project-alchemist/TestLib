@@ -164,7 +164,7 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 			uint32_t niters = prob.GetIter();
 			log->info("Done after {} Arnoldi iterations, converged to {} eigenvectors of size {}", niters, nconv, n);
 
-			//NB: it may be the case that n*nconv > 4 GB, then have to be careful!
+			// NB: it may be the case that n*nconv > 4 GB, then have to be careful!
 			// assuming tall and skinny A for now
 			MatrixXd rightVecs(n, nconv);
 			log->info("Allocated matrix for right eigenvectors of A'*A");
