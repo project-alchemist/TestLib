@@ -60,6 +60,8 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 		out.add_uint64("new_rank", new_rank);
 		out.add_string("vv", vv);
 
+		log->info("pol {}", out.to_string());
+
 		MPI_Barrier(world);
 	}
 	else if (task_name.compare("kmeans") == 0) {
@@ -166,7 +168,7 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 
 			// NB: it may be the case that n*nconv > 4 GB, then have to be careful!
 			// assuming tall and skinny A for now
-			MatrixXd rightVecs(n, nconv);
+			Eigen::MatrixXd rightVecs(n, nconv);
 			log->info("Allocated matrix for right eigenvectors of A'*A");
 			// Eigen uses column-major layout by default!
 			for(uint32_t idx = 0; idx < nconv; idx++)
@@ -290,9 +292,9 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 					uint32_t nconv;
 					MPI_Bcast(&nconv, 1, MPI_UNSIGNED, 0, world);
 
-					MatrixXd rightEigs(n, nconv);
+					Eigen::MatrixXd rightEigs(n, nconv);
 					MPI_Bcast(rightEigs.data(), n*nconv, MPI_DOUBLE, 0, world);
-					VectorXd singValsSq(nconv);
+					Eigen::VectorXd singValsSq(nconv);
 					MPI_Bcast(singValsSq.data(), nconv, MPI_DOUBLE, 0, world);
 					log->info("Received the right eigenvectors and the eigenvalues");
 
