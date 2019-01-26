@@ -60,8 +60,6 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 		out.add_uint64("new_rank", new_rank);
 		out.add_string("vv", vv);
 
-		log->info("pol {}", out.to_string());
-
 		MPI_Barrier(world);
 	}
 	else if (task_name.compare("kmeans") == 0) {
@@ -123,20 +121,15 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 				break;
 			}
 
-			log->info("U -2 {} {}", n, rank);
 			ARrcSymStdEig<double> prob((int) n, rank, "LM");
-			log->info("U -1");
 			uint8_t command;
 			std::vector<double> zerosVector(n);
-			log->info("U 0");
 			for (uint32_t idx = 0; idx < n; idx++)
 				zerosVector[idx] = 0.0;
 
-			log->info("U 1");
 			uint32_t iterNum = 0;
 
 			while (!prob.ArnoldiBasisFound()) {
-				log->info("U 2");
 				prob.TakeStep();
 				++iterNum;
 				if (iterNum % 20 == 0) log->info("Computed {} matrix-vector products", iterNum);
@@ -144,7 +137,6 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 					command = 1;
 
 					MPI_Bcast(&command, 1, MPI_UNSIGNED_CHAR, 0, world);
-					log->info("U 3");
 					if (method == 0 || method == 1) {
 						auto temp = prob.GetVector();
 						MPI_Bcast(prob.GetVector(), n, MPI_DOUBLE, 0, world);
