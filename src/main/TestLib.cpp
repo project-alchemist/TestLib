@@ -88,7 +88,6 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 	else if (task_name.compare("truncated_svd") == 0) {
 
 		if (is_driver) {
-
 			int rank = (int) in.get_int32("rank");
 			uint8_t method = 1;
 			MatrixInfo_ptr A = in.get_matrix_info("A");
@@ -185,7 +184,6 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 			MPI_Barrier(world);
 		}
 		else {
-
 			int rank = (int) in.get_int32("rank");
 			uint8_t method = 1;
 			DistMatrix_ptr A = in.get_distmatrix("A");
@@ -327,7 +325,6 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 					out.add_distmatrix("S", S);
 					out.add_distmatrix("U", U);
 					out.add_distmatrix("V", V);
-
 
 					break;
 				}
