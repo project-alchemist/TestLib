@@ -17,10 +17,10 @@ if [ "$SYSTEM" == "MacOS" ]; then
 elif [ "$SYSTEM" == "Cori" ]; then
 	export TESTLIB_PATH=$SCRATCH/Projects/TestLib
 	
-	export ELEMENTAL_PATH=$SCRATCH/Software/Elemental
-	export SPDLOG_PATH=$SCRATCH/Software/SPDLog
-	export EIGEN3_PATH=$SCRATCH/Software/Eigen3
-	export ARPACK_PATH=$SCRATCH/Software/ARPACK
+	export ELEMENTAL_PATH=$SCRATCH/lib/Elemental
+	export SPDLOG_PATH=$SCRATCH/lib/spdlog	
+	export EIGEN3_PATH=$SCRATCH/lib/Eigen
+	export ARPACK_PATH=$SCRATCH/lib/ARPACK
 	
 elif [ "$SYSTEM" == "Linux" ]; then
 	export TESTLIB_PATH=/usr/local/TestLib
