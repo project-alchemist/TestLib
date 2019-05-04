@@ -38,7 +38,7 @@ int TestLib::unload()
 	return 0;
 }
 
-int TestLib::run(string & task_name, Parameters & in, Parameters & out)
+int TestLib::run(string & task_name, vector<Parameter_ptr> & in, vector<Parameter_ptr> & out)
 {
 	// Get the rank and size in the original communicator
 	int world_rank, world_size;
@@ -49,7 +49,12 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 
 	if (task_name.compare("greet") == 0) {
 
-		int32_t rank = in.get_int32("rank");
+		int32_t rank = 0;
+
+		for (auto it = in.begin(); it != in.end(); it++) {
+			if ((*it)->name == "rank")
+				rank = * (* reinterpret_cast<std::shared_ptr<uint32_t> * >((*it)->p));
+		}
 
 		if (is_driver) log->info("Saying hello from TestLib driver {}", rank);
 		else log->info("Saying hello from TestLib worker {} {}", world_rank, rank);
@@ -57,8 +62,11 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 		uint64_t new_rank = 6666;
 		string vv = "spacious";
 
-		out.add_uint64("new_rank", new_rank);
-		out.add_string("vv", vv);
+		std::shared_ptr<uint64_t> puint64 = std::make_shared<uint64_t>(new_rank);
+		out.push_back(std::make_shared<Parameter>("new_rank", UINT64, reinterpret_cast<void *>(&puint64)));
+
+		std::shared_ptr<string> pstring = std::make_shared<string>(vv);
+		out.push_back(std::make_shared<Parameter>("vv", STRING, reinterpret_cast<void *>(&pstring)));
 
 		MPI_Barrier(world);
 	}
@@ -87,10 +95,32 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 	}
 	else if (task_name.compare("truncated_svd") == 0) {
 
+		log->info("___b");
+
 		if (is_driver) {
-			int rank = (int) in.get_int32("rank");
+			log->info("___b1");
+
+			int rank = 0;
+			MatrixInfo * A = nullptr;
+			log->info("___b2");
+
+			for (auto it = in.begin(); it != in.end(); it++) {
+				log->info("___b3 {}", (*it)->name);
+				if ((*it)->name == "rank") {
+					log->info("___b4");
+					rank = (int) * reinterpret_cast<uint32_t * >((*it)->p);
+					log->info("___bb_ {} {}", (*it)->name, rank);
+				}
+				else if ((*it)->name == "A") {
+					log->info("___b4");
+					A = reinterpret_cast<MatrixInfo * >((*it)->p);
+					log->info("___b5");
+					log->info("___bb_ {} {}", (*it)->name, A->num_rows);
+				}
+			}
+
+
 			uint8_t method = 1;
-			MatrixInfo_ptr A = in.get_matrix_info("A");
 
 			uint64_t m = A->num_rows;
 			uint64_t n = A->num_cols;
@@ -184,9 +214,36 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 			MPI_Barrier(world);
 		}
 		else {
-			int rank = (int) in.get_int32("rank");
+			int rank = 0;
+			DistMatrix * A = nullptr;
+
+			for (auto it = in.begin(); it != in.end(); it++) {
+				log->info("___b3 {}", (*it)->name);
+				if ((*it)->name == "rank") {
+					log->info("___b4");
+					rank = (int) * reinterpret_cast<uint32_t * >((*it)->p);
+					log->info("___bb_ {} {}", (*it)->name, rank);
+				}
+				else if ((*it)->name == "A") {
+					log->info("___b4");
+					A = reinterpret_cast<DistMatrix * >((*it)->p);
+					log->info("___b5");
+					log->info("___bb_ {} {}", (*it)->name, A->Height());
+				}
+			}
+
+//			for (auto it = in.begin(); it != in.end(); it++) {
+//				if ((*it)->name == "rank") {
+//					rank = (int) * (* reinterpret_cast<std::shared_ptr<uint32_t> * >((*it)->p));
+//					log->info("___bb_ {} {}", (*it)->name, rank);
+//				}
+//				else if ((*it)->name == "A") {
+//					A = * (* reinterpret_cast<std::shared_ptr<DistMatrix_ptr> * >((*it)->p));
+//					log->info("___bb_ {} {}", (*it)->name, A->Height());
+//				}
+//			}
+
 			uint8_t method = 1;
-			DistMatrix_ptr A = in.get_distmatrix("A");
 
 			const El::Grid & grid = A->Grid();
 
@@ -288,10 +345,16 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 					MPI_Bcast(singValsSq.data(), nconv, MPI_DOUBLE, 0, world);
 					log->info("Received the right eigenvectors and the eigenvalues");
 
-					DistMatrix_ptr U    = std::make_shared<El::DistMatrix<double, El::VR, El::STAR>>(m, nconv, grid);
-					DistMatrix_ptr S    = std::make_shared<El::DistMatrix<double, El::VR, El::STAR>>(nconv, 1, grid);
-					DistMatrix_ptr Sinv = std::make_shared<El::DistMatrix<double, El::VR, El::STAR>>(nconv, 1, grid);
-					DistMatrix_ptr V    = std::make_shared<El::DistMatrix<double, El::VR, El::STAR>>(n, nconv, grid);
+//					DistMatrix_ptr U    = std::make_shared<El::DistMatrix<double, El::VR, El::STAR>>(m, nconv, grid);
+//					DistMatrix_ptr S    = std::make_shared<El::DistMatrix<double, El::VR, El::STAR>>(nconv, 1, grid);
+//					DistMatrix_ptr Sinv = std::make_shared<El::DistMatrix<double, El::VR, El::STAR>>(nconv, 1, grid);
+//					DistMatrix_ptr V    = std::make_shared<El::DistMatrix<double, El::VR, El::STAR>>(n, nconv, grid);
+
+
+					El::DistMatrix<double, El::VR, El::STAR> * U    = new El::DistMatrix<double, El::VR, El::STAR>(m, nconv, grid);
+					El::DistMatrix<double, El::VR, El::STAR> * S    = new El::DistMatrix<double, El::VR, El::STAR>(nconv, 1, grid);
+					El::DistMatrix<double, El::VR, El::STAR> * Sinv = new El::DistMatrix<double, El::VR, El::STAR>(nconv, 1, grid);
+					El::DistMatrix<double, El::VR, El::STAR> * V    = new El::DistMatrix<double, El::VR, El::STAR>(n, nconv, grid);
 
 					log->info("Created new matrix objects to hold U, S, and V");
 
@@ -321,10 +384,14 @@ int TestLib::run(string & task_name, Parameters & in, Parameters & out)
 					// TODO: do a QR instead to ensure stability, but does column pivoting so would require postprocessing S,V to stay consistent
 					El::DiagonalScale(El::RIGHT, El::NORMAL, *Sinv, *U);
 					log->info("Computed and stored U");
+//
+//					out.add_distmatrix("S", S);
+//					out.add_distmatrix("U", U);
+//					out.add_distmatrix("V", V);
 
-					out.add_distmatrix("S", S);
-					out.add_distmatrix("U", U);
-					out.add_distmatrix("V", V);
+					out.push_back(std::make_shared<Parameter>("S", DISTMATRIX_VR_STAR, reinterpret_cast<void *>(S)));
+					out.push_back(std::make_shared<Parameter>("U", DISTMATRIX_VR_STAR, reinterpret_cast<void *>(U)));
+					out.push_back(std::make_shared<Parameter>("V", DISTMATRIX_VR_STAR, reinterpret_cast<void *>(V)));
 
 					break;
 				}

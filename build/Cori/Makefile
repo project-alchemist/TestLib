@@ -5,15 +5,16 @@ TARGET_PATH = $(TESTLIB_PATH)/target
 
 # Put Elemental's CXXFLAGS in front so ours can override them     "-I$(SRC_PATH)/ml" "-I$(SRC_PATH)/ml/clustering" "-I$(SRC_PATH)/nla"
 CXXFLAGS += $(EL_COMPILE_FLAGS) -fdiagnostics-color=always
-CXXFLAGS += -Wno-unused -Wno-reorder -std=c++11 -fext-numeric-literals -fopenmp
+CXXFLAGS += -Wno-unused -Wno-reorder -std=c++11 -fopenmp
 CXXFLAGS += "-I$(SRC_PATH)/include" "-I$(SRC_PATH)/utility"
 CXXFLAGS += "-I$(ELEMENTAL_PATH)/include" "-I$(SPDLOG_PATH)/include" "-I$(EIGEN3_PATH)/include" "-I$(ARPACK_PATH)/include"
 
+LDFLAGS += "-L$(ELEMENTAL_PATH)/lib64" "-Wl,-rpath,$(ELEMENTAL_PATH)/lib64"
 LDFLAGS += "-L$(EL_LIB)" "-Wl,-rpath,$(EL_LIB)" $(EL_LIBS)
 LDFLAGS += "-Wl,-rpath,$(SPDLOG_PATH)/lib"
 LDFLAGS += "-Wl,-rpath,$(ARPACK_PATH)/lib" -larpack
-LDFLAGS += -lmpi
-	
+LDFLAGS += -Wl,-rpath,/opt/intel/compilers_and_libraries_2019.3.199/linux/compiler/lib/intel64_lin/ -L/opt/intel/compilers_and_libraries_2019.3.199/linux/compiler/lib/intel64_lin/ -lirc
+
 #MODULES   := main main/ml/clustering main/nla
 MODULES   := main
 SRC_DIR   := $(addprefix $(TESTLIB_PATH)/src/,$(MODULES))

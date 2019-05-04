@@ -3,7 +3,6 @@
 
 //#include <omp.h>
 #include <stdio.h>
-#include <string>
 #include <iostream>
 #include <vector>
 #include <poll.h>
@@ -34,7 +33,7 @@ struct TestLib : Library {
 	int load();
 	int unload();
 
-	int run(string & name, alchemist::Parameters & input, alchemist::Parameters & output);
+	int run(string & name, std::vector<Parameter_ptr> & in, std::vector<Parameter_ptr> & out);
 };
 
 // Class factories
