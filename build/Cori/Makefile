@@ -8,6 +8,7 @@ CXXFLAGS += $(EL_COMPILE_FLAGS) -fdiagnostics-color=always
 CXXFLAGS += -Wno-unused -Wno-reorder -std=c++11 -fopenmp
 CXXFLAGS += "-I$(SRC_PATH)/include" "-I$(SRC_PATH)/utility"
 CXXFLAGS += "-I$(ELEMENTAL_PATH)/include" "-I$(SPDLOG_PATH)/include" "-I$(EIGEN3_PATH)/include" "-I$(ARPACK_PATH)/include"
+CXXFLAGS += -fPIC
 
 LDFLAGS += "-L$(ELEMENTAL_PATH)/lib64" "-Wl,-rpath,$(ELEMENTAL_PATH)/lib64"
 LDFLAGS += "-L$(EL_LIB)" "-Wl,-rpath,$(EL_LIB)" $(EL_LIBS)

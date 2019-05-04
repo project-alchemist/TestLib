@@ -10,6 +10,16 @@ else
 	export TESTLIB=$TESTLIB_PATH/target/testlib.so
 fi
 
+if [ "$SYSTEM" == "Cori" ];
+then
+	module unload darshan
+	module unload PrgEnv-intel
+	module load PrgEnv-gnu
+	module load gcc
+	module load java
+	module load cmake
+fi
+
 CURR_DIR=$PWD
 
 echo " "
