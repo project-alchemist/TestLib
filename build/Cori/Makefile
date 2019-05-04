@@ -13,7 +13,7 @@ CXXFLAGS += -fPIC
 LDFLAGS += "-L$(ELEMENTAL_PATH)/lib64" "-Wl,-rpath,$(ELEMENTAL_PATH)/lib64"
 LDFLAGS += "-L$(EL_LIB)" "-Wl,-rpath,$(EL_LIB)" $(EL_LIBS)
 LDFLAGS += "-Wl,-rpath,$(SPDLOG_PATH)/lib"
-LDFLAGS += "-Wl,-rpath,$(ARPACK_PATH)/lib" -larpack
+LDFLAGS += "-Wl,-rpath,$(ARPACK_PATH)/lib"
 LDFLAGS += -Wl,-rpath,/opt/intel/compilers_and_libraries_2019.3.199/linux/compiler/lib/intel64_lin/ -L/opt/intel/compilers_and_libraries_2019.3.199/linux/compiler/lib/intel64_lin/ -lirc
 
 #MODULES   := main main/ml/clustering main/nla
