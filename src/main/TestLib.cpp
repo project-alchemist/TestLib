@@ -49,25 +49,55 @@ int TestLib::run(string & task_name, vector<Parameter_ptr> & in, vector<Paramete
 
 	if (task_name.compare("greet") == 0) {
 
-		int32_t rank = 0;
+		uint8_t in_byte = 0;
+		char in_char = ' ';
+		int16_t in_short = 0;
+		int32_t in_int = 0;
+		int64_t in_long = 0;
+		float in_float = 0.0;
+		double in_double = 0.0;
+		string in_string = "";
 
 		for (auto it = in.begin(); it != in.end(); it++) {
-			if ((*it)->name == "rank")
-				rank = * (* reinterpret_cast<std::shared_ptr<uint32_t> * >((*it)->p));
+			if ((*it)->name == "in_byte")
+				in_byte = * reinterpret_cast<uint8_t * >((*it)->p);
+			else if ((*it)->name == "in_char")
+				in_char = * reinterpret_cast<char * >((*it)->p);
+			else if ((*it)->name == "in_short")
+				in_short = * reinterpret_cast<int16_t * >((*it)->p);
+			else if ((*it)->name == "in_int")
+				in_int = * reinterpret_cast<int32_t * >((*it)->p);
+			else if ((*it)->name == "in_long")
+				in_long = * reinterpret_cast<int64_t * >((*it)->p);
+			else if ((*it)->name == "in_float")
+				in_float = * reinterpret_cast<float * >((*it)->p);
+			else if ((*it)->name == "in_double")
+				in_double = * reinterpret_cast<double * >((*it)->p);
+			else if ((*it)->name == "in_string")
+				in_string = * reinterpret_cast<string * >((*it)->p);
 		}
 
-		if (is_driver) log->info("Saying hello from TestLib driver {}", rank);
-		else log->info("Saying hello from TestLib worker {} {}", world_rank, rank);
+		if (is_driver) log->info("TestLib driver received the following input:");
+		else log->info("TestLib worker {} received the following input:", world_rank);
+		log->info("    {}", (int) in_byte);
+		log->info("    {}", in_char);
+		log->info("    {}", in_short);
+		log->info("    {}", in_int);
+		log->info("    {}", in_long);
+		log->info("    {}", in_float);
+		log->info("    {}", in_double);
+		log->info("    {}", in_string);
 
-		uint64_t new_rank = 6666;
-		string vv = "spacious";
-
-		std::shared_ptr<uint64_t> puint64 = std::make_shared<uint64_t>(new_rank);
-		out.push_back(std::make_shared<Parameter>("new_rank", UINT64, reinterpret_cast<void *>(&puint64)));
-
-		std::shared_ptr<string> pstring = std::make_shared<string>(vv);
-		out.push_back(std::make_shared<Parameter>("vv", STRING, reinterpret_cast<void *>(&pstring)));
-
+		if (is_driver) {
+			out.push_back(std::make_shared<Parameter>("out_byte", UINT8, reinterpret_cast<void *>(new uint8_t(in_byte))));
+			out.push_back(std::make_shared<Parameter>("out_char", CHAR, reinterpret_cast<void *>(new char(in_char))));
+			out.push_back(std::make_shared<Parameter>("out_short", UINT16, reinterpret_cast<void *>(new uint16_t(in_short))));
+			out.push_back(std::make_shared<Parameter>("out_int", UINT32, reinterpret_cast<void *>(new uint32_t(in_int))));
+			out.push_back(std::make_shared<Parameter>("out_long", UINT64, reinterpret_cast<void *>(new uint64_t(in_long))));
+			out.push_back(std::make_shared<Parameter>("out_float", FLOAT, reinterpret_cast<void *>(new float(in_float))));
+			out.push_back(std::make_shared<Parameter>("out_double", DOUBLE, reinterpret_cast<void *>(new double(in_double))));
+			out.push_back(std::make_shared<Parameter>("out_string", STRING, reinterpret_cast<void *>(new string(in_string))));
+		}
 		MPI_Barrier(world);
 	}
 	else if (task_name.compare("kmeans") == 0) {
