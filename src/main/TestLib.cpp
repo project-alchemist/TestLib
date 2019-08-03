@@ -125,27 +125,17 @@ int TestLib::run(string & task_name, vector<Parameter_ptr> & in, vector<Paramete
 	}
 	else if (task_name.compare("truncated_svd") == 0) {
 
-		log->info("___b");
-
 		if (is_driver) {
-			log->info("___b1");
 
 			int rank = 0;
 			MatrixInfo * A = nullptr;
-			log->info("___b2");
 
 			for (auto it = in.begin(); it != in.end(); it++) {
-				log->info("___b3 {}", (*it)->name);
 				if ((*it)->name == "rank") {
-					log->info("___b4");
 					rank = (int) * reinterpret_cast<uint32_t * >((*it)->p);
-					log->info("___bb_ {} {}", (*it)->name, rank);
 				}
 				else if ((*it)->name == "A") {
-					log->info("___b4");
 					A = reinterpret_cast<MatrixInfo * >((*it)->p);
-					log->info("___b5");
-					log->info("___bb_ {} {}", (*it)->name, A->num_rows);
 				}
 			}
 
@@ -248,28 +238,20 @@ int TestLib::run(string & task_name, vector<Parameter_ptr> & in, vector<Paramete
 			DistMatrix * A = nullptr;
 
 			for (auto it = in.begin(); it != in.end(); it++) {
-				log->info("___b3 {}", (*it)->name);
 				if ((*it)->name == "rank") {
-					log->info("___b4");
 					rank = (int) * reinterpret_cast<uint32_t * >((*it)->p);
-					log->info("___bb_ {} {}", (*it)->name, rank);
 				}
 				else if ((*it)->name == "A") {
-					log->info("___b4");
 					A = reinterpret_cast<DistMatrix * >((*it)->p);
-					log->info("___b5");
-					log->info("___bb_ {} {}", (*it)->name, A->Height());
 				}
 			}
 
 //			for (auto it = in.begin(); it != in.end(); it++) {
 //				if ((*it)->name == "rank") {
 //					rank = (int) * (* reinterpret_cast<std::shared_ptr<uint32_t> * >((*it)->p));
-//					log->info("___bb_ {} {}", (*it)->name, rank);
 //				}
 //				else if ((*it)->name == "A") {
 //					A = * (* reinterpret_cast<std::shared_ptr<DistMatrix_ptr> * >((*it)->p));
-//					log->info("___bb_ {} {}", (*it)->name, A->Height());
 //				}
 //			}
 
