@@ -265,6 +265,14 @@ int TestLib::run(string & task_name, vector<Parameter_ptr> & in, vector<Paramete
 			if (rank > m) rank = m;
 			if (rank > n) rank = n;
 
+			for (uint64_t ii = 0; ii < 10; ii++)
+			{
+				log->info("Row {}", ii);
+				for (uint64_t jj = 0; jj < 10; jj++)
+					log->info(" {}", A->Get(ii, jj));
+				log->info("\n");
+			}
+
 			MPI_Barrier(world);
 
 			log->info("Starting truncated SVD");
